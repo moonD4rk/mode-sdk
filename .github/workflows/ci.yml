@@ -34,6 +34,10 @@ jobs:
   # passing three of four.
   test:
     runs-on: ubuntu-latest
+    # id-token powers Codecov's tokenless OIDC upload; nothing is stored in secrets.
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -44,4 +48,12 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --python ${{ matrix.python }}
-      - run: uv run pytest -q
+      - run: uv run pytest -q --cov --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: coverage.xml
+          fail_ci_if_error: true
+          flags: unittests
+          name: py${{ matrix.python }}

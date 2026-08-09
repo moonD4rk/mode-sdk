@@ -30,7 +30,13 @@ Changelog = "https://github.com/moonD4rk/mode-sdk/blob/main/CHANGELOG.md"
 "Mode API Reference" = "https://mode.com/developer/api-reference/introduction/"
 
 [dependency-groups]
-dev = ["pyright>=1.1.400", "pytest>=8", "respx>=0.22", "ruff>=0.9"]
+dev = [
+    "pyright>=1.1.400",
+    "pytest>=8",
+    "pytest-cov>=7.1.0",
+    "respx>=0.22",
+    "ruff>=0.9",
+]
 
 [build-system]
 requires = ["uv_build>=0.9,<0.10"]
@@ -41,6 +47,10 @@ module-name = "mode_sdk"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["mode_sdk"]
+branch = true
 
 [tool.ruff]
 line-length = 100
