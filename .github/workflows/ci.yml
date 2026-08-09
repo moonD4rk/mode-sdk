@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Lint and type checking run once, on the floor interpreter: both are configured for
+  # 3.11 (ruff derives target-version from requires-python, pyright pins pythonVersion),
+  # so running them per-version would repeat one answer four times.
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --python 3.11
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run pyright
+      # Catches a broken packaging config on every push instead of on release day.
+      - run: uv build
+
+  # The floor is listed first so a 3.12-only construct fails the fastest job rather than
+  # passing three of four.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --python ${{ matrix.python }}
+      - run: uv run pytest -q

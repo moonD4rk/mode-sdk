@@ -1,0 +1,72 @@
+[project]
+name = "mode-sdk"
+version = "0.1.0"
+description = "Unofficial Python SDK for the Mode Analytics REST and Discovery APIs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "moonD4rk" }]
+keywords = ["mode", "mode-analytics", "analytics", "api", "sdk", "bi", "thoughtspot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = ["httpx>=0.28"]
+
+[project.urls]
+Repository = "https://github.com/moonD4rk/mode-sdk"
+Issues = "https://github.com/moonD4rk/mode-sdk/issues"
+Changelog = "https://github.com/moonD4rk/mode-sdk/blob/main/CHANGELOG.md"
+"Mode API Reference" = "https://mode.com/developer/api-reference/introduction/"
+
+[dependency-groups]
+dev = ["pyright>=1.1.400", "pytest>=8", "respx>=0.22", "ruff>=0.9"]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mode_sdk"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF", "ANN"]
+
+[tool.ruff.lint.per-file-ignores]
+# A test's name is its documentation and its body is its assertion. ANN401 stays on
+# everywhere, tests included.
+"tests/**" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204", "ANN205", "ANN206"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+# Mode's payloads are `dict[str, Any]` on purpose, so `payload.get("_links")` is an
+# unknown to strict mode and these three rules fire on code behaving as designed. Off
+# here rather than suppressed per line; the rest of strict still applies.
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
