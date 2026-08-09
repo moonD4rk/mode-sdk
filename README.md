@@ -1,5 +1,12 @@
 # mode-sdk
 
+[![PyPI](https://img.shields.io/pypi/v/mode-sdk.svg)](https://pypi.org/project/mode-sdk/)
+[![Python](https://img.shields.io/pypi/pyversions/mode-sdk.svg)](https://pypi.org/project/mode-sdk/)
+[![CI](https://github.com/moonD4rk/mode-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/moonD4rk/mode-sdk/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/moonD4rk/mode-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/moonD4rk/mode-sdk)
+[![Types](https://img.shields.io/badge/types-py.typed-blue.svg)](https://github.com/moonD4rk/mode-sdk/blob/main/src/mode_sdk/py.typed)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Unofficial Python SDK for the [Mode Analytics API](https://mode.com/developer/api-reference/introduction/) — the documented REST surface plus the Discovery batch API. Not affiliated with Mode or ThoughtSpot.
 
 - Python 3.11+, one runtime dependency (`httpx`), fully typed
