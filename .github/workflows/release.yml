@@ -1,0 +1,130 @@
+name: Release
+
+# Manual, library-only release. Trigger from the Actions tab with the target
+# version; the job bumps pyproject.toml, publishes mode-sdk to PyPI, tags the
+# commit, cuts a GitHub Release, and opens a PR to merge the bump back to main.
+# Nothing here runs automatically on push.
+#
+# One-time setup before the first run:
+#   1. PyPI Trusted Publishing (a "pending publisher" until the first upload):
+#      project mode-sdk, owner moonD4rk, repository mode-sdk, workflow
+#      release.yml, environment pypi.
+#   2. The moond4rk-ci GitHub App installed on this repo with
+#      contents+pull-requests write, its Client ID in the
+#      MOOND4RK_CI_RELEASE_APP_CLIENT_ID variable and private key in the
+#      MOOND4RK_CI_RELEASE_APP_PRIVATE_KEY secret (so the bump PR and tag are
+#      pushed by the app, not GITHUB_TOKEN).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: pypi
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.MOOND4RK_CI_RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.MOOND4RK_CI_RELEASE_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve app bot identity
+        id: bot
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          {
+            echo "name=${APP_SLUG}[bot]"
+            echo "email=${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Validate version input
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+((a|b|rc)[0-9]+)?$ ]]; then
+            echo "::error::Invalid version '$VERSION' (expected PEP 440 without leading v, e.g. 0.2.0 or 0.2.0rc1)"
+            exit 1
+          fi
+
+      # The first release ships the version already in pyproject.toml, so an
+      # unchanged bump is not an error -- it just skips the branch and the PR.
+      - name: Bump project version
+        id: bump
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          uv version --no-sync "$VERSION"
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "${{ steps.bot.outputs.name }}"
+            git config user.email "${{ steps.bot.outputs.email }}"
+            git switch -c "release/v${VERSION}"
+            git commit -am "chore: release ${VERSION}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Push branch, tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ inputs.version }}
+          CHANGED: ${{ steps.bump.outputs.changed }}
+        run: |
+          target=$(git rev-parse HEAD)
+          if [ "$CHANGED" = "true" ]; then
+            git push origin "release/v${VERSION}"
+            target="release/v${VERSION}"
+          fi
+          prev=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')
+          notes=(--generate-notes)
+          [ -n "$prev" ] && notes+=(--notes-start-tag "$prev")
+          gh release create "v${VERSION}" \
+            --target "$target" \
+            --title "v${VERSION}" \
+            "${notes[@]}"
+
+      - name: Open PR to merge bump into main
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head "release/v${VERSION}" \
+            --title "chore: release ${VERSION}" \
+            --body "Version bump for \`${VERSION}\`, already published to PyPI by the release workflow.")
+          gh pr merge "$PR_URL" --auto --squash --delete-branch

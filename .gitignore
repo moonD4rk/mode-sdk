@@ -1,0 +1,37 @@
+# Never tracked, on any machine.
+.env
+.env.*
+!.env.example
+rfcs/
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+dist/
+build/
+*.egg-info/
+.idea/
+.vscode/
+.DS_Store
+
+# The lines below re-include files for setups whose global gitignore excludes everything.
+!.gitignore
+!.env.example
+!LICENSE
+!README.md
+!CHANGELOG.md
+!CLAUDE.md
+
+!pyproject.toml
+!uv.lock
+!.python-version
+!src/**/*.py
+!src/mode_sdk/py.typed
+!tests/**/*.py
+
+!.github/**
